@@ -1,0 +1,16 @@
+# Entornos visuales
+venv/
+env/
+
+# Carpetas de dependencias
+__pycache__/
+node_modules/
+.env
+
+# Archivos de configuración de VS Code
+.vscode/
+
+# Bases de datos y datasets (para no subir datos pesados)
+*.db
+*.sqlite3
+*.csv
