@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.predict import router as predict_router
+from app.routes.tramites import router as tramites_router
 
 # Crear la aplicación FastAPI
 app = FastAPI(title='API de predicción de Trámites')
@@ -15,6 +16,7 @@ app.add_middleware(
 
 # Rutas
 app.include_router(predict_router, prefix="/api")
+app.include_router(tramites_router, prefix="/api")
 
 @app.get("/")
 def read_root():
