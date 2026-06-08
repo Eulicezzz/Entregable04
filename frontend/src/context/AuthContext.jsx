@@ -1,27 +1,27 @@
-import {createContext, useState, useEffect} from 'react';
+import { createContext, useState, useCallback, useMemo } from 'react';
 
 export const AuthContext = createContext();
 
-export const AuthProvider = ({children}) => {
-    // Intentamos recuperar el token del localStorage al iniciar la aplicación
-    const [token, setToken] = useState(localStorage.getItem('token') || null);
-    const [isAuthenticated, setIsAuthenticated] = useState(!!token);
+export const AuthProvider = ({ children }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    localStorage.getItem('isAuthenticated') === 'true'
+  );
 
-    const login = (newToken) => {
-        localStorage.setItem('token', newToken);
-        setToken(newToken);
-        setIsAuthenticated(true);
-    };
+  const login = useCallback(() => {
+    setIsAuthenticated(true);
+    localStorage.setItem('isAuthenticated', 'true');
+  }, []);
 
-    const logout = () => {
-        localStorage.removeItem('token');
-        setToken(null);
-        setIsAuthenticated(false);
-    };
+  const logout = useCallback(() => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('isAuthenticated');
+  }, []);
 
-    return (
-        <AuthContext.Provider value={{ token, isAuthenticated, login, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  const value = useMemo(() => ({ isAuthenticated, login, logout }), [isAuthenticated, login, logout]);
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
