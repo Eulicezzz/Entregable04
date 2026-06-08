@@ -9,7 +9,8 @@ app = FastAPI(title='API de predicción de Trámites')
 # Configurar CORS para permitir solicitudes desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["*"],  # Cambia esto si tu frontend está en otra URL
+    allow_origins = ["*"],  # esto debera restringir al dominio
+    allow_credentials = True,
     allow_methods = ["*"],
     allow_headers = ["*"]
 )
