@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database import get_bd
+from app.database import get_db
 from app.models.tramite import Tramite
 
 #Schema para validar la creación
@@ -20,12 +20,12 @@ class TramiteCreate(BaseModel):
 router = APIRouter()
 
 @router.get("/tramites")
-def read_tramites(db: Session = Depends(get_bd)):
+def read_tramites(db: Session = Depends(get_db)):
     tramites = db.query(Tramite).all()
     return tramites
 
 @router.post("/tramites")
-def create_tramite(tramite: TramiteCreate, db: Session = Depends(get_bd)):
+def create_tramite(tramite: TramiteCreate, db: Session = Depends(get_db)):
     nuevo_tramite = Tramite(**tramite.dict())
     db.add(nuevo_tramite)
     db.commit()

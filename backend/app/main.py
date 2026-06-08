@@ -6,12 +6,16 @@ from app.routes.auth import router as auth_router
 
 
 # Crear la aplicación FastAPI
-app = FastAPI(title='API de predicción de Trámites')
+app = FastAPI()
+
+origins = [
+    "http://localhost:5173",  # El puerto de tu React
+]
 
 # Configurar CORS para permitir solicitudes desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins = ["*"],  # esto debera restringir al dominio
+    allow_origins = origins,  
     allow_credentials = True,
     allow_methods = ["*"],
     allow_headers = ["*"]
@@ -20,8 +24,8 @@ app.add_middleware(
 # Rutas
 app.include_router(predict_router, prefix="/api")
 app.include_router(tramites_router, prefix="/api")
-app.include_router(auth_router, prefix="/api")
+app.include_router(auth_router, prefix="/api", tags=["auth"])
 
 @app.get("/")
 def read_root():
-    return {"status": "El backend IA está funcionando correctamente."}
+    return {"message": "Servidor funcionando correctamente."}
