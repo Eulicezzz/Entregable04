@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import './Tramites.css'; // Asegúrate de importar el archivo de estilos
 
-function TramiteForm() {
+function TramiteForm({ onRegistroExitoso }) {
   const [tiposTramite, setTiposTramite] = useState([]);
   const [cargando, setCargando] = useState(false);
   const idLogueado = parseInt(localStorage.getItem('id_ciudadano')) || 1;
@@ -24,7 +25,7 @@ function TramiteForm() {
     fetch('http://127.0.0.1:8000/api/tipos-tramite')
       .then((res) => res.json())
       .then((data) => setTiposTramite(data))
-      .catch((err) => console.error("Error cargando tipos:", err));
+      .catch((err) => console.error("Error al cargar:", err));
   }, []);
 
   const handleChange = (e) => {
@@ -85,56 +86,48 @@ function TramiteForm() {
     }
   };
 
-  const styles = {
-    formGroup: { marginBottom: '15px', display: 'flex', flexDirection: 'column' },
-    input: { padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' },
-    button: { padding: '10px', marginTop: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }
-  };
-
-  if (tiposTramite.length === 0) return <div style={{textAlign: 'center', marginTop: '20px'}}>Cargando formulario...</div>;
-
   return (
-    <div style={{ maxWidth: '400px', margin: 'auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-      <form onSubmit={handleSubmit}>
-        <div style={styles.formGroup}>
+    // Aplicamos la clase 'card' que definimos en el CSS
+    <div className="card">
+      <h3 style={{ marginTop: '0', color: '#2c3e50' }}>Registrar Nuevo Trámite</h3>
+      <form onSubmit={handleSubmit} className="tramite-form">
+        
+        <div className="form-group">
+          <label>ID Ciudadano</label>
+          <input className="input-field" type="number" min="0" required onChange={(e) => setFormData({...formData, id_ciudadano: parseInt(e.target.value)})} />
+        </div>
+        
+        <div className="form-group">
           <label>Tipo de Trámite:</label>
-          <select name="tipo_tramite" style={styles.input} onChange={handleChange} value={formData.tipo_tramite}>
-            {tiposTramite.map(t => <option key={t} value={t}>{t}</option>)}
+          <select className="input-field" required onChange={(e) => setFormData({...formData, tipo_tramite: e.target.value})}>
+            <option value="">Seleccione...</option>
+            {Array.isArray(tiposTramite) && tiposTramite.map((tipo, index) => (
+              <option key={index} value={tipo}>{tipo}</option>
+            ))}
           </select>
         </div>
-        <div style={styles.formGroup}>
+
+        <div className="form-group">
           <label>Descripción:</label>
-          <input type="text" name="descripcion" style={styles.input} onChange={handleChange} value={formData.descripcion} required />
+          <textarea className="input-field" placeholder="Breve descripción..." onChange={(e) => setFormData({...formData, descripcion: e.target.value})} />
         </div>
-        <div style={styles.formGroup}>
-          <label>Días en espera:</label>
-          <input type="number" name="dias_en_espera" style={styles.input} onChange={handleChange} value={formData.dias_en_espera} />
+        
+        <div style={{ display: 'flex', gap: '20px' }}>
+          <div className="form-group" style={{ flex: 1 }}>
+            <label>¿Documentación completa?</label>
+            <select className="input-field" onChange={(e) => setFormData({...formData, documentacion_completa: parseInt(e.target.value)})}>
+              <option value="0">No</option>
+              <option value="1">Sí</option>
+            </select>
+          </div>
+          
+          <div className="form-group" style={{ flex: 1 }}>
+            <label>Reclamos Previos:</label>
+            <input className="input-field" type="number" min="0" defaultValue="0" onChange={(e) => setFormData({...formData, reclamos_previos: parseInt(e.target.value)})} />
+          </div>
         </div>
-        <div style={styles.formGroup}>
-          <label>Edad solicitante:</label>
-          <input type="number" name="edad_solicitante" style={styles.input} onChange={handleChange} value={formData.edad_solicitante} />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Reclamos previos:</label>
-          <input type="number" name="reclamos_previos" style={styles.input} onChange={handleChange} value={formData.reclamos_previos} />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Documentación completa:</label>
-          <select name="documentacion_completa" style={styles.input} onChange={handleChange} value={formData.documentacion_completa}>
-            <option value={1}>Sí</option>
-            <option value={0}>No</option>
-          </select>
-        </div>
-        <div style={styles.formGroup}>
-          <label>¿Es vulnerable?:</label>
-          <select name="es_vulnerable" style={styles.input} onChange={handleChange} value={formData.es_vulnerable}>
-            <option value={1}>Sí</option>
-            <option value={0}>No</option>
-          </select>
-        </div>
-        <button type="submit" style={styles.button} disabled={cargando}>
-          {cargando ? 'Procesando IA...' : '🚀 Desplegar y Registrar'}
-        </button>
+        
+        <button type="submit" className="btn-primary">Guardar Trámite</button>
       </form>
     </div>
   );
