@@ -3,9 +3,8 @@ import { createContext, useState, useCallback, useMemo } from 'react';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    localStorage.getItem('isAuthenticated') === 'true'
-  );
+  // CAMBIO: Forzamos false al inicio para que SIEMPRE pida login
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const login = useCallback(() => {
     setIsAuthenticated(true);

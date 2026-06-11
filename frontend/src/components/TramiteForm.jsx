@@ -1,195 +1,141 @@
 import { useState, useEffect } from 'react';
 
-function TramiteForm({ onRegistroExitoso }) {
-
+function TramiteForm() {
   const [tiposTramite, setTiposTramite] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const idLogueado = parseInt(localStorage.getItem('id_ciudadano')) || 1;
+
   const [formData, setFormData] = useState({
-    id_ciudadano: '',
-    tipo_tramite: '',
+    id_ciudadano: idLogueado,
+    tipo_tramite: 'Consulta',
     descripcion: '',
     documentacion_completa: 0,
     reclamos_previos: 0,
     estado_actual: 'Pendiente',
     fecha_ingreso: new Date().toISOString().split('T')[0],
-    
-    
-    dias_en_espera: 0, 
+    dias_en_espera: 0,
     edad_solicitante: 18,
     es_vulnerable: 0,
     zona_geografica: 'Urbana',
     tipo_solicitante: 'Persona natural'
   });
 
-  
-  const [resultadoIA, setResultadoIA] = useState(null);
-  const [cargando, setCargando] = useState(false);
-
- 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/tipos-tramite')
-      .then((res) => {
-        if (!res.ok) throw new Error('Error en la API');
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => setTiposTramite(data))
-      .catch((err) => console.error("No se pudieron cargar los tipos:", err));
+      .catch((err) => console.error("Error cargando tipos:", err));
   }, []);
 
- 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const { name, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'number' ? parseInt(value) : value
+    }));
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCargando(true);
-    setResultadoIA(null);
+
+    // 1. LIMPIEZA DE DATOS PARA LA IA (Forzamos números)
+    const datosParaIA = {
+      ...formData,
+      id_ciudadano: parseInt(formData.id_ciudadano),
+      documentacion_completa: parseInt(formData.documentacion_completa),
+      reclamos_previos: parseInt(formData.reclamos_previos),
+      dias_en_espera: parseInt(formData.dias_en_espera),
+      edad_solicitante: parseInt(formData.edad_solicitante),
+      es_vulnerable: parseInt(formData.es_vulnerable)
+    };
 
     try {
-      //  Enviamos los datos necesarios a tu endpoint del Modelo 2 
-      const iaResponse = await fetch('http://127.0.0.1:8000/predecir/modelo2', {
+      const iaResponse = await fetch('http://127.0.0.1:8000/api/predecir/modelo2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo_tramite: formData.tipo_tramite,
-          dias_en_espera: parseFloat(formData.dias_en_espera),
-          documentacion_completa: parseFloat(formData.documentacion_completa),
-          reclamos_previos: parseFloat(formData.reclamos_previos),
-          edad_solicitante: parseFloat(formData.edad_solicitante),
-          es_vulnerable: parseFloat(formData.es_vulnerable),
-          zona_geografica: formData.zona_geografica,
-          tipo_solicitante: formData.tipo_solicitante
-        }),
+        body: JSON.stringify(datosParaIA),
       });
 
-      if (!iaResponse.ok) throw new Error('Error al conectar con la IA');
+      if (!iaResponse.ok) throw new Error("Error en el modelo de IA");
       const dataIA = await iaResponse.json();
-      setResultadoIA(dataIA);
 
-      // Inyectamos los resultados de la IA al JSON final y guardamos en la BD 
-      const datosFinalesDB = {
+      // 2. Preparar el objeto para MySQL
+      const datosCompletosParaDB = {
         ...formData,
-        score_criticidad: dataIA.score_criticidad_calculado,
-        dias_estimados: dataIA.dias_estimados_predichos
+        score_criticidad: parseFloat(dataIA.score_criticidad),
+        dias_estimados: parseInt(dataIA.prediccion)
       };
 
-      const response = await fetch('http://127.0.0.1:8000/api/tramites', {
+      // 3. Guardar en Base de Datos
+      const dbResponse = await fetch('http://127.0.0.1:8000/api/tramites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(datosFinalesDB),
+        body: JSON.stringify(datosCompletosParaDB),
       });
 
-      if (response.ok) {
-        alert('Trámite registrado con éxito y evaluado por la IA');
-        onRegistroExitoso();
-      } else {
-        alert('Se calculó la predicción IA, pero la base de datos rechazó el guardado.');
-      }
+      if (!dbResponse.ok) throw new Error("Error al guardar en BD");
+      
+      alert(`✅ Trámite registrado con éxito. Predicción: ${dataIA.prediccion} días.`);
+      
     } catch (error) {
-      console.error('Error al registrar:', error);
-      alert('Error en el flujo de datos.');
+      alert('❌ Error: ' + error.message);
     } finally {
       setCargando(false);
     }
   };
 
+  const styles = {
+    formGroup: { marginBottom: '15px', display: 'flex', flexDirection: 'column' },
+    input: { padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ccc' },
+    button: { padding: '10px', marginTop: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }
+  };
+
+  if (tiposTramite.length === 0) return <div style={{textAlign: 'center', marginTop: '20px'}}>Cargando formulario...</div>;
+
   return (
-    <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
-      
-      {/* FORMULARIO */}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxWidth: '300px' }}>
-        <h3>Registrar Nuevo Trámite</h3>
-        
-        <input 
-          type="number" 
-          placeholder="ID Ciudadano" 
-          min="0" 
-          required 
-          onChange={(e) => setFormData({...formData, id_ciudadano: parseInt(e.target.value)})} 
-        />
-        
-        <label>Tipo de Trámite:</label>
-        <select required value={formData.tipo_tramite} name="tipo_tramite" onChange={handleChange}>
-          <option value="">Seleccione...</option>
-          {Array.isArray(tiposTramite) && tiposTramite.map((tipo, index) => (
-            <option key={index} value={tipo}>{tipo}</option>
-          ))}
-        </select>
-
-        <textarea 
-          placeholder="Descripción" 
-          onChange={(e) => setFormData({...formData, descripcion: e.target.value})} 
-        />
-        
-        <label>¿Documentación completa?</label>
-        <select onChange={(e) => setFormData({...formData, documentacion_completa: parseInt(e.target.value)})}>
-          <option value="0">No</option>
-          <option value="1">Sí</option>
-        </select>
-        
-        <label>Reclamos Previos:</label>
-        <input 
-          type="number" 
-          min="0" 
-          defaultValue="0" 
-          onChange={(e) => setFormData({...formData, reclamos_previos: parseInt(e.target.value)})} 
-        />
-
-        {/* NUEVOS CAMPOS AGREGADOS */}
-        <label>Edad del Solicitante:</label>
-        <input 
-          type="number" 
-          min="18" 
-          max="110" 
-          value={formData.edad_solicitante} 
-          onChange={(e) => setFormData({...formData, edad_solicitante: parseInt(e.target.value)})} 
-          required 
-        />
-
-        <label>¿Es un perfil Vulnerable?</label>
-        <select onChange={(e) => setFormData({...formData, es_vulnerable: parseInt(e.target.value)})}>
-          <option value="0">No</option>
-          <option value="1">Sí</option>
-        </select>
-
-        <label>Zona Geográfica:</label>
-        <select name="zona_geografica" value={formData.zona_geografica} onChange={handleChange}>
-          <option value="Urbana">Urbana</option>
-          <option value="Rural">Rural</option>
-        </select>
-
-        <label>Tipo de Solicitante:</label>
-        <select name="tipo_solicitante" value={formData.tipo_solicitante} onChange={handleChange}>
-          <option value="Persona natural">Persona Natural</option>
-          <option value="Persona jurídica">Persona Jurídica</option>
-        </select>
-        
-        <button type="submit" disabled={cargando}>
-          {cargando ? 'Calculando Redes Neuronales...' : 'Guardar Trámite'}
+    <div style={{ maxWidth: '400px', margin: 'auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
+      <form onSubmit={handleSubmit}>
+        <div style={styles.formGroup}>
+          <label>Tipo de Trámite:</label>
+          <select name="tipo_tramite" style={styles.input} onChange={handleChange} value={formData.tipo_tramite}>
+            {tiposTramite.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div style={styles.formGroup}>
+          <label>Descripción:</label>
+          <input type="text" name="descripcion" style={styles.input} onChange={handleChange} value={formData.descripcion} required />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Días en espera:</label>
+          <input type="number" name="dias_en_espera" style={styles.input} onChange={handleChange} value={formData.dias_en_espera} />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Edad solicitante:</label>
+          <input type="number" name="edad_solicitante" style={styles.input} onChange={handleChange} value={formData.edad_solicitante} />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Reclamos previos:</label>
+          <input type="number" name="reclamos_previos" style={styles.input} onChange={handleChange} value={formData.reclamos_previos} />
+        </div>
+        <div style={styles.formGroup}>
+          <label>Documentación completa:</label>
+          <select name="documentacion_completa" style={styles.input} onChange={handleChange} value={formData.documentacion_completa}>
+            <option value={1}>Sí</option>
+            <option value={0}>No</option>
+          </select>
+        </div>
+        <div style={styles.formGroup}>
+          <label>¿Es vulnerable?:</label>
+          <select name="es_vulnerable" style={styles.input} onChange={handleChange} value={formData.es_vulnerable}>
+            <option value={1}>Sí</option>
+            <option value={0}>No</option>
+          </select>
+        </div>
+        <button type="submit" style={styles.button} disabled={cargando}>
+          {cargando ? 'Procesando IA...' : '🚀 Desplegar y Registrar'}
         </button>
       </form>
-
-      {/* PANEL DERECHO: VISUALIZADOR */}
-      <div style={{ marginTop: '40px', minWidth: '250px' }}>
-        {resultadoIA && (
-          <div style={{ padding: '15px', border: '2px solid #2ecc71', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
-            <h4 style={{ color: '#2ecc71', marginTop: 0 }}>🔮 Resultados Predictivos IA</h4>
-            
-            <div style={{ marginBottom: '10px', padding: '8px', backgroundColor: '#fff', borderRadius: '4px' }}>
-              <small style={{ color: '#7f8c8d' }}>Criticidad del Caso (M1):</small>
-              <div style={{ fontSize: '18px', fontWeight: 'bold' }}>{resultadoIA.score_criticidad_calculado} pts</div>
-            </div>
-
-            <div style={{ padding: '8px', backgroundColor: '#fff', borderRadius: '4px' }}>
-              <small style={{ color: '#7f8c8d' }}>Tiempo Estimado (M2):</small>
-              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#9b59b6' }}>{resultadoIA.dias_estimados_predichos} días</div>
-            </div>
-          </div>
-        )}
-      </div>
-
     </div>
   );
 }
