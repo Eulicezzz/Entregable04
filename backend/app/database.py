@@ -14,7 +14,6 @@ DB_NAME = os.getenv("DB_NAME")
 
 #Estructura: mysql+mysqlconnector://user:password@host/db_name
 SQLALCHEMY_DATABASE_URL = f"mysql+mysqlconnector://{USER}:{PASSWORD}@{HOST}/{DB_NAME}"
-
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

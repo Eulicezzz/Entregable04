@@ -4,6 +4,9 @@ import tensorflow as tf
 import numpy as np
 
 router = APIRouter()
+modelos = cargar_modelos()
+m_criticidad = modelos['modelo_criticidad']
+m_dias = modelos['modelo_dias']
 
 # Cargar el modelo .keras
 modelo_criticidad = tf.keras.models.load_model('app/models/modelo_criticidad.keras')
